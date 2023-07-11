@@ -1,0 +1,298 @@
+package team.opay.pay.security.intercept;
+
+import android.util.Base64;
+import com.alibaba.fastjson.JSONObject;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.HashMap;
+import java.util.Locale;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import kotlin.TypeCastException;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.Request.Builder;
+import okhttp3.RequestBody;
+import okhttp3.RequestBody.Companion;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import team.opay.pay.envconfigapi.ConfigStorage;
+import team.opay.pay.envconfigapi.ConfigStorage.a;
+import team.opay.swarmfoundation.data.ICombinationDataGenerator;
+
+public final class HttpAESUtils {
+    public static final char[] a;
+    public static final au1 b = q80.e0(2.INSTANCE);
+    public static final HttpAESUtils c = null;
+
+    public static final String a(Builder builder, RequestBody requestBody, Request request) {
+        String str;
+        Object charset;
+        String str2 = "0123456789ABCDEF";
+        lx1.h(builder, "builder");
+        lx1.h(request, "request");
+        String encodedPath = request.url().encodedPath();
+        if (requestBody == null || requestBody.contentLength() <= 0) {
+            str = "{}";
+        } else {
+            eb2 eb2;
+            MediaType contentType = requestBody.contentType();
+            if (contentType != null) {
+                charset = contentType.charset(StandardCharsets.UTF_8);
+                if (charset != null) {
+                    eb2 = new eb2();
+                    requestBody.writeTo(eb2);
+                    lx1.c(charset, "charset");
+                    str = mh0.parse(eb2.S(charset)).toString();
+                }
+            }
+            charset = StandardCharsets.UTF_8;
+            eb2 = new eb2();
+            requestBody.writeTo(eb2);
+            lx1.c(charset, "charset");
+            str = mh0.parse(eb2.S(charset)).toString();
+        }
+        long currentTimeMillis = System.currentTimeMillis();
+        String str3 = (String) uu1.r(request.headers("token"), 0);
+        String str4 = "";
+        if (str3 == null) {
+            str3 = str4;
+        }
+        String str5 = "app";
+        Builder removeHeader = builder.removeHeader(str5);
+        ICombinationDataGenerator c = c();
+        removeHeader.addHeader(str5, String.valueOf(c != null ? c.appId() : null));
+        str5 = "platform";
+        removeHeader = builder.removeHeader(str5);
+        c = c();
+        removeHeader.addHeader(str5, String.valueOf(c != null ? c.platform() : null));
+        str5 = "version_name";
+        removeHeader = builder.removeHeader(str5);
+        c = c();
+        removeHeader.addHeader(str5, String.valueOf(c != null ? c.versionName() : null));
+        str5 = "device_id";
+        removeHeader = builder.removeHeader(str5);
+        c = c();
+        removeHeader.addHeader(str5, String.valueOf(c != null ? c.deviceId() : null));
+        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("raw_data=");
+        stringBuilder2.append(str);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&app=");
+        c = c();
+        stringBuilder2.append(c != null ? c.appId() : null);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&platform=");
+        c = c();
+        stringBuilder2.append(c != null ? c.platform() : null);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&version_name=");
+        c = c();
+        stringBuilder2.append(c != null ? c.versionName() : null);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&device_id=");
+        c = c();
+        stringBuilder2.append(c != null ? c.deviceId() : null);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&timestamp=");
+        stringBuilder2.append(currentTimeMillis);
+        stringBuilder.append(stringBuilder2.toString());
+        stringBuilder2 = new StringBuilder();
+        stringBuilder2.append("&token=");
+        stringBuilder2.append(str3);
+        stringBuilder.append(stringBuilder2.toString());
+        str3 = stringBuilder.toString();
+        lx1.c(str3, "sb.toString()");
+        MessageDigest instance = MessageDigest.getInstance("MD5");
+        byte[] bytes = str3.getBytes(fz1.b);
+        String str6 = "(this as java.lang.String).getBytes(charset)";
+        lx1.c(bytes, str6);
+        bytes = instance.digest(bytes);
+        lx1.c(bytes, "bytes");
+        stringBuilder = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) {
+            char[] cArr = a;
+            stringBuilder.append(cArr[(b >> 4) & 15]);
+            stringBuilder.append(cArr[b & 15]);
+        }
+        str3 = stringBuilder.toString();
+        lx1.c(str3, "r.toString()");
+        Locale locale = Locale.ENGLISH;
+        lx1.c(locale, "Locale.ENGLISH");
+        str3 = str3.toLowerCase(locale);
+        lx1.c(str3, "(this as java.lang.String).toLowerCase(locale)");
+        builder.addHeader("signV3", str3);
+        builder.addHeader("timestamp", String.valueOf(currentTimeMillis));
+        try {
+            Object obj;
+            HashMap hashMap;
+            bytes = MessageDigest.getInstance("SHA1PRNG").generateSeed(16);
+            if (bytes == null) {
+                obj = str4;
+            } else {
+                StringBuffer stringBuilder3 = new StringBuilder(bytes.length);
+                for (byte b2 : bytes) {
+                    stringBuilder3.append(str2.charAt((b2 >> 4) & 15));
+                    stringBuilder3.append(str2.charAt(b2 & 15));
+                }
+                obj = stringBuilder3.toString();
+                lx1.c(obj, "result.toString()");
+            }
+            str2 = "data";
+            lx1.h(str, str2);
+            lx1.h(obj, "secretKey");
+            lx1.h(str, "content");
+            String str7 = "key";
+            lx1.h(obj, str7);
+            String str8 = "UTF-8";
+            Charset forName = Charset.forName(str8);
+            String str9 = "Charset.forName(charsetName)";
+            lx1.c(forName, str9);
+            byte[] bytes2 = str.getBytes(forName);
+            lx1.c(bytes2, str6);
+            forName = Charset.forName(str8);
+            lx1.c(forName, str9);
+            byte[] bytes3 = obj.getBytes(forName);
+            lx1.c(bytes3, str6);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(bytes3, "AES");
+            Charset forName2 = Charset.forName(str8);
+            lx1.c(forName2, str9);
+            byte[] bytes4 = "2022111500123456".getBytes(forName2);
+            lx1.c(bytes4, str6);
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(bytes4);
+            MessageDigest instance2 = MessageDigest.getInstance("AES/CBC/PKCS5Padding");
+            instance2.init(1, secretKeySpec, ivParameterSpec);
+            str = Base64.encodeToString(instance2.doFinal(bytes2), 0);
+            str8 = "\\";
+            str5 = "\n";
+            Object D = str != null ? ez1.D(ez1.D(str, str5, str4, false, 4), str8, str4, false, 4) : null;
+            ICombinationDataGenerator c2 = c();
+            Object appId = c2 != null ? c2.appId() : null;
+            if (appId == null) {
+                appId = str4;
+            }
+            lx1.h(appId, "appId");
+            lx1.h(obj, str2);
+            ml1 ml1 = ml1.b;
+            lx1.h(appId, str7);
+            if (ml1.a.containsKey(appId)) {
+                hashMap = ml1.a;
+            } else {
+                hashMap = ml1.a;
+                appId = "1";
+            }
+            nl1 nl1 = (nl1) hashMap.get(appId);
+            if (nl1 != null) {
+                lx1.h(obj, "text");
+                String str10 = nl1.b;
+                Charset charset2 = fz1.b;
+                if (str10 != null) {
+                    byte[] bytes5 = str10.getBytes(charset2);
+                    lx1.c(bytes5, str6);
+                    PublicKey generatePublic = MessageDigest.getInstance(nl1.a).generatePublic(new X509EncodedKeySpec(Base64.decode(bytes5, 0)));
+                    lx1.c(generatePublic, "keyFactory.generatePublic(keySpec)");
+                    MessageDigest instance3 = MessageDigest.getInstance("RSA/ECB/PKCS1Padding");
+                    instance3.init(1, generatePublic);
+                    byte[] bytes6 = obj.getBytes(charset2);
+                    lx1.c(bytes6, str6);
+                    str7 = Base64.encodeToString(instance3.doFinal(bytes6), 0);
+                    lx1.c(str7, "Base64.encodeToString(encryData, Base64.DEFAULT)");
+                } else {
+                    throw new TypeCastException("null cannot be cast to non-null type java.lang.String");
+                }
+            }
+            str7 = null;
+            charset = str7 != null ? ez1.D(ez1.D(str7, str5, str4, false, 4), str8, str4, false, 4) : null;
+            JSONObject jSONObject = new JSONObject();
+            jSONObject.put("encrypt_data", D);
+            jSONObject.put("encrypt_aes_key", charset);
+            Companion companion = RequestBody.Companion;
+            str7 = jSONObject.toString();
+            lx1.c(str7, "json.toString()");
+            requestBody = companion.create(str7, MediaType.Companion.parse("application/json"));
+            StringBuilder stringBuilder4 = new StringBuilder();
+            stringBuilder4.append("aes encryptBody ==> path=");
+            stringBuilder4.append(encodedPath);
+            stringBuilder4.append(" key=");
+            stringBuilder4.append(obj);
+            lx1.h(stringBuilder4.toString(), str2);
+            boolean z = ConfigStorage.f.a().c;
+            builder.post(requestBody);
+            return obj;
+        } catch (Exception e) {
+            e.printStackTrace();
+            StringBuilder J = uj0.J("addSign aes generateKey失败 ");
+            J.append(e.getMessage());
+            throw new TypeCastException(J.toString());
+        }
+    }
+
+    public static final Response b(String str, Response response, String str2) {
+        String str3 = "key";
+        lx1.h(str, str3);
+        lx1.h(response, "response");
+        lx1.h(str2, "path");
+        ResponseBody body = response.body();
+        if (body == null) {
+            return response;
+        }
+        if ((str.length() > 0 ? 1 : null) == null) {
+            return response;
+        }
+        hb2 source = body.source();
+        source.Z(Long.MAX_VALUE);
+        String S = source.b().c().S(fz1.b);
+        lx1.h(S, "base64Data");
+        lx1.h(str, "secretKey");
+        lx1.h(str, str3);
+        byte[] decode = Base64.decode(S, 0);
+        lx1.c(decode, "Base64.decode(content,Base64.DEFAULT)");
+        S = "UTF-8";
+        Charset forName = Charset.forName(S);
+        String str4 = "Charset.forName(charsetName)";
+        lx1.c(forName, str4);
+        byte[] bytes = str.getBytes(forName);
+        String str5 = "(this as java.lang.String).getBytes(charset)";
+        lx1.c(bytes, str5);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(bytes, "AES");
+        forName = Charset.forName(S);
+        lx1.c(forName, str4);
+        bytes = "2022111500123456".getBytes(forName);
+        lx1.c(bytes, str5);
+        IvParameterSpec ivParameterSpec = new IvParameterSpec(bytes);
+        MessageDigest instance = MessageDigest.getInstance("AES/CBC/PKCS5Padding");
+        instance.init(2, secretKeySpec, ivParameterSpec);
+        decode = instance.doFinal(decode);
+        lx1.c(decode, "result");
+        Charset forName2 = Charset.forName(S);
+        lx1.c(forName2, str4);
+        String str6 = new String(decode, forName2);
+        a aVar = ConfigStorage.f;
+        if (aVar.a().c) {
+            StringBuilder N = uj0.N("aes decryptBody successfuly path=", str2, " key=", str, " body=");
+            N.append(str6);
+            lx1.h(N.toString(), "data");
+            boolean z = aVar.a().c;
+        }
+        return response.newBuilder().body(ResponseBody.Companion.create(str6, MediaType.Companion.parse("application/json"))).build();
+    }
+
+    static {
+        char[] toCharArray = "0123456789ABCDEF".toCharArray();
+        lx1.c(toCharArray, "(this as java.lang.String).toCharArray()");
+        a = toCharArray;
+    }
+
+    public static final ICombinationDataGenerator c() {
+        return (ICombinationDataGenerator) b.getValue();
+    }
+}
